@@ -3,10 +3,10 @@
 ####################### Author:   Qing Wang        #############################
 ####################### Date Updated: May 2nd 2019 #############################
 ################################################################################
-library(gstat)
 library(parallelDist)
 library(spatstat)
 library(FNN)
+library(raster)
 
 # FUNCTION: drawFromCDF
 # Draw random number form cdf estimated by feature-space observations based on 

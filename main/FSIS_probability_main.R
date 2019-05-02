@@ -2,7 +2,7 @@ options(scipen = 999)
 options(stringsAsFactors = F)
 
 # set working directory under FSIS folder
-source("./utility.R")
+source("/shared/utility.R")
 
 # hyperparameter
 fs_obs_num     = 5      # -- number of nearest FS observations included
