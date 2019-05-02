@@ -139,9 +139,49 @@ createBlock <- function(fs_block_size, fs_dim, if_empty) {
     return(block_obj)
 }
 
-# FUNCTION: sampleBlock
-# Create sample locations within high-dimension block in feature space, based
-# on the block object created by createBlock
-sampleBlock <- function(fs_loc, block_obj, fs_kn_size) {
-    
+# FUNCTION: getFSMap
+# Read imagery data and create a map of the corresponding feature space
+getFSMap <- function(img_dir) {
+    for (i in 1:length(img_dir)) {
+        img_obj = readImageRS(img_dir[i])
+        # make sure all the image inputs have the same extend, projects and resolution
+        if (i > 2 ) {
+            if (setdiff(img_obj[[2]], ext)) { 
+                cat("ERROR: image extends are different")
+                stop
+            }
+            if (setdiff(img_obj[[3]], img_res) != 0) {
+                cat("ERROR: image resolutions are different")
+                stop
+            }
+            if (img_obj[[4]] != prj) {
+                cat("ERROR: image projections are different")
+                stop
+            }
+            fs_map = cbind(fs_map, img_obj[[1]])
+        }
+        ext     <- img_obj[[2]]
+        img_res <- img_obj[[3]]
+        prj     <- img_obj[[4]]
+        if (i == 1) {
+            fs_map = img_obj[[1]]
+        }
+    }
+    img_ext <<- ext
+    img_res <<- img_res
+    img_prj <<- prj
+    return(unique(fs_map))
+}
+
+# FUNCTION: readImageRS
+# Read single layer remotely sensed image as a matrix, also return projection,  
+# extend, and resolution. Based on raster package: 
+# https://cran.r-project.org/web/packages/raster/raster.pdf
+readImageRS <- function(img_dir_sig) {
+    img     <- raster(img_dir_sig)
+    ext     <- extend(img)
+    prj     <- proj4string(img)
+    img_res <- res(img)
+    img_mtx <- as.matrix(img)
+    return(list(c(img_mtx), ext, img_res, prj))
 }
