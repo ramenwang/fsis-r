@@ -108,11 +108,11 @@ FSIK <- function(fs_loc, fs_obs_loc, fs_obs, fs_obs_num, lsfit, vgm_model) {
 # FUNCTION: blockFSIK
 # Calculate indicator Kriging for multiple neighbors around the location to be
 # estimated in feature space
-blockFSIK <- function(fs_kn_loc, fs_kn_size, fs_obs_loc, fs_obs, fs_obs_num, 
+blockFSIK <- function(fs_block_loc, fs_obs_loc, fs_obs, fs_obs_num, 
                        lsfit, vgm_model) {
-    fs_kn_pred = array(dim = fs_kn_size)
+    fs_kn_pred = array(dim = nrow(fs_block_loc))
     for (i in 1:fs_kn_size) {
-        fs_kn_pred[i] <- FSIK(t(fs_kn_loc[i,]), fs_obs_loc, fs_obs, 
+        fs_kn_pred[i] <- FSIK(t(fs_block_loc[i,]), fs_obs_loc, fs_obs, 
                                fs_obs_num, lsfit, vgm_model)
     }
     return(fs_kn_pred)
@@ -184,4 +184,51 @@ readImageRS <- function(img_dir_sig) {
     img_res <- res(img)
     img_mtx <- as.matrix(img)
     return(list(c(img_mtx), ext, img_res, prj))
+}
+
+# FUNCTION: plot2DFS
+# Plot a 2D feature space for selected features
+plot2DFS <- function(fs_obs, fs_obs_loc_2d, is_Classify = F){
+    if (is_Classify == F) {
+        colfunc <- colorRampPalette(c("#fee5d9", "#fcae91", "#fb6a4a", 
+                                      "#de2d26", "#a50f15"))
+        colfunc <- colfunc(5)[as.numeric(cut(fs_obs,breaks = 5))]
+        lgd     <- sort(unique(cut(fs_obs,breaks = 5)))
+        pch_lgd <- rep(15,5)
+        col_lgd <- c("#fee5d9", "#fcae91", "#fb6a4a", "#de2d26", "#a50f15")
+    } else {
+        colfunc <- colorRampPalette(c("#deebf7", "#3182bd"))
+        colfunc <- colfunc(2)[as.numeric(cut(fs_obs,breaks = 2))] 
+    }
+    par(mar=c(5.1, 4.1, 4.1, 8.1), xpd=TRUE)
+    plot(fs_obs_loc_2d[,1], fs_obs_loc_2d[,2],
+         col = colfunc, pch = 15, xlab = colnames(fs_obs_loc_2d)[1],
+         ylab = colnames(fs_obs_loc_2d)[2],
+         main = paste0("2D Feature Space of ", colnames(fs_obs_loc_2d)[1], "-", colnames(fs_obs_loc_2d)[2]))
+    legend(par('usr')[2], par('usr')[4], inset=c(-1,0), legend=lgd, 
+           col = col_lgd, pch=pch_lgd, title="Value", bty='n')
+}
+
+# FUNCTION: makeTrainingSet
+# Make training set and test set based on samples. This can be used before fully
+# running the model for image classifiation or probability mapping
+makeTrainingSet <- function(fs_obs, fs_obs_loc, pct_train) {
+    random_index     = sample(1:length(fs_obs), round(pct_train*length(fs_obs)))
+    fs_obs_train     <<- fs_obs[random_index]
+    fs_obs_loc_train <<- fs_obs_loc[random_index,]
+    fs_obs_test      <<- fs_obs[-random_index]
+    fs_obs_loc_test  <<- fs_obs_loc[-random_index,]
+}
+
+# FUNCTION: singleFSIS
+# Running FSIS for a single time
+singleFSIS <- function(fs_obs, fs_obs_loc, fs_map, block_obj,
+                       density_kernel_function, prob_precision, fs_obs_num) {
+    fs_map = unique(fs_map)
+    fs_path <- sample(1:nrow(fs_map), nrow(fs_map))
+    for (i in fs_path) {
+        fs_loc = fs_map[i,]
+        block_loc <- t(fs_loc+t(block_obj))
+        
+    }
 }
