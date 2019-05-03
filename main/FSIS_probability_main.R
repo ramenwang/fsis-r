@@ -52,6 +52,26 @@ for (i in 1:sim_num) {
     cat("Running on FSIS simulation: ", i,"\n")
 }
 
-# plot residule
-plot(fs_obs_test, FSIS_pred_single, xlab = "Prediction", ylab = "Observation")
+FSIS_mean = rowMeans(FSIS_pred)
 
+FSIS_p95 = apply(FSIS_pred, 1, FUN = function(x) quantile(x, .95))
+FSIS_p05 = apply(FSIS_pred, 1, FUN = function(x) quantile(x, .05))
+FSIS_q1 = apply(FSIS_pred, 1, FUN = function(x) quantile(x, .25))
+FSIS_q3 = apply(FSIS_pred, 1, FUN = function(x) quantile(x, .75))
+FSIS_median = apply(FSIS_pred, 1, FUN = median)
+FSIS_var = apply(FSIS_pred, 1, FUN = var)
+
+# plot residule
+if (!is_classify) {
+    colfunc <- colorRampPalette(c("#fee5d9", "#fcae91", "#fb6a4a", 
+                                  "#de2d26", "#a50f15"))
+    colfunc <- colfunc(5)[as.numeric(cut(FSIS_var, breaks = 5))]
+    lgd     <- sort(unique(cut(FSIS_var,breaks = 5)))
+    pch_lgd <- rep(15,5)
+    col_lgd <- c("#fee5d9", "#fcae91", "#fb6a4a", "#de2d26", "#a50f15")
+    par(mar=c(5.1, 4.1, 4.1, 8.1), xpd=TRUE)
+    plot(fs_obs_test, FSIS_mean, ylab = "Mean FSIS Prediction", xlab = "Observation",
+         col = colfunc, pch = 15, main = "Residule Plot")
+    legend(par('usr')[2], par('usr')[4], inset=c(-1,0), legend=lgd, 
+           col = col_lgd, pch=pch_lgd, title="Value", bty='n')
+}
