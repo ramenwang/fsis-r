@@ -11,7 +11,7 @@ names(obs_dat) <- toupper(names(obs_dat))
 
 # read variables
 fs_obs_loc     = as.matrix(obs_dat[, var_nam])
-fs_obs         = obs_dat[, y_nam]
+fs_obs         = obs_dat[, y_nam]/100
 
 # global parameters
 fs_dim         = length(var_nam)
@@ -35,6 +35,23 @@ for (i in 1:(fs_dim - 1)) {
 }
 cat("Please check <", paste0(out_dir,"/sample_fs"), "> for sample distribution in 2D feature space")
 
-# sample level validation
+# fit feature space variogram
+lsfit <- fitFSVGM(fs_obs, fs_obs_loc, vgm_model = "poly", ifplot = T, is_classify)
+# split training and testing set
 makeTrainingSet(fs_obs, fs_obs_loc, pct_train)
+# test FSIS run on training and testing set
+for (i in 1:sim_num) {
+    FSIS_pred_single <- singleFSIS(fs_obs_train, fs_obs_loc_train, fs_obs_loc_test, 
+                                   block_obj, fs_kn_size, density_kernel_function, 
+                                   prob_precision, fs_obs_num, lsfit, vgm_model)
+    if (i == 1) {
+        FSIS_pred <- FSIS_pred_single
+    } else {
+        FSIS_pred <- cbind(FSIS_pred, FSIS_pred_single)
+    }
+    cat("Running on FSIS simulation: ", i,"\n")
+}
+
+# plot residule
+plot(fs_obs_test, FSIS_pred_single, xlab = "Prediction", ylab = "Observation")
 

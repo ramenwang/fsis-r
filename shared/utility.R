@@ -40,18 +40,21 @@ distKNN <- function(fs_loc, fs_obs_loc, fs_obs_num) {
 # FUNCTION: fitFSVGM
 # Form a feature space variogram function for indicator kriging. This is an
 # autofitting process based on least-square esitmation
-fitFSVGM <- function(fs_obs, fs_obs_loc, vgm_model = "sigm", ifplot = T) {
-    h = c(parDist(fs_obs_loc, method = "sigm"))
+fitFSVGM <- function(fs_obs, fs_obs_loc, vgm_model = "sigm", ifplot = T, is_classify) {
+    h = c(parDist(fs_obs_loc, method = "euclidean"))
     obs_dif =  c(parDist(t(rbind(fs_obs, rep(0,length(fs_obs))))))
     # fitting model by using least-square estimation
     if (vgm_model == "poly") {
         lsfit = lm(obs_dif ~ h + I(h^2) + I(h^3))
     } else if (vgm_model == "sigm") {
-        lsfit = glm(obs_dif ~ h, family=binomial)
+        if (is_classify) lsfit = glm(obs_dif ~ h, family=binomial)
+        if (!is_classify) {
+            cat("ERROR: Please select another vgm model!")
+        }
     } else if (vgm_model == "relu") {
         lsfit = lm(obs_dif ~ h)
     } else {
-        cat("Please select model from sph, gau or pwd, which stand for spheric
+        cat("ERROR: Please select model from sph, gau or pwd, which stand for spheric
             Gaussian and power model")
         stop
     }
@@ -111,10 +114,12 @@ FSIK <- function(fs_loc, fs_obs_loc, fs_obs, fs_obs_num, lsfit, vgm_model) {
 blockFSIK <- function(fs_block_loc, fs_obs_loc, fs_obs, fs_obs_num, 
                        lsfit, vgm_model) {
     fs_kn_pred = array(dim = nrow(fs_block_loc))
-    for (i in 1:fs_kn_size) {
+    for (i in 1:nrow(fs_block_loc)) {
         fs_kn_pred[i] <- FSIK(t(fs_block_loc[i,]), fs_obs_loc, fs_obs, 
                                fs_obs_num, lsfit, vgm_model)
     }
+    fs_kn_pred = ifelse(fs_kn_pred <0, 0, fs_kn_pred)
+    fs_kn_pred = ifelse(fs_kn_pred >1, 1, fs_kn_pred)
     return(fs_kn_pred)
 }
 
@@ -188,8 +193,8 @@ readImageRS <- function(img_dir_sig) {
 
 # FUNCTION: plot2DFS
 # Plot a 2D feature space for selected features
-plot2DFS <- function(fs_obs, fs_obs_loc_2d, is_Classify = F){
-    if (is_Classify == F) {
+plot2DFS <- function(fs_obs, fs_obs_loc_2d, is_classify = F){
+    if (is_classify == F) {
         colfunc <- colorRampPalette(c("#fee5d9", "#fcae91", "#fb6a4a", 
                                       "#de2d26", "#a50f15"))
         colfunc <- colfunc(5)[as.numeric(cut(fs_obs,breaks = 5))]
@@ -222,13 +227,19 @@ makeTrainingSet <- function(fs_obs, fs_obs_loc, pct_train) {
 
 # FUNCTION: singleFSIS
 # Running FSIS for a single time
-singleFSIS <- function(fs_obs, fs_obs_loc, fs_map, block_obj,
-                       density_kernel_function, prob_precision, fs_obs_num) {
+singleFSIS <- function(fs_obs, fs_obs_loc, fs_map, block_obj, fs_kn_size,
+                       density_kernel_function, prob_precision, fs_obs_num,
+                       lsfit, vgm_model) {
     fs_map = unique(fs_map)
+    fs_map_out = array(dim = nrow(fs_map))
+    tol_block_loc = nrow(block_obj)
     fs_path <- sample(1:nrow(fs_map), nrow(fs_map))
     for (i in fs_path) {
         fs_loc = fs_map[i,]
         block_loc <- t(fs_loc+t(block_obj))
-        
+        fs_block_loc <- block_loc[sample(1:tol_block_loc, fs_kn_size), ]
+        fs_kn_pred = blockFSIK(fs_block_loc, fs_obs_loc, fs_obs, fs_obs_num, lsfit, vgm_model)
+        fs_map_out[i] = drawFromCDF(fs_kn_pred, density_kernel_function, prob_precision)
     }
+    return(fs_map_out)
 }
